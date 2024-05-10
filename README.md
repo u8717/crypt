@@ -15,7 +15,7 @@ Implements encryption and integrity protection using AES-CBC cipher mode and HMA
 ### Message Format
 The encrypted message package has the following structure:
 
-[ MAC | AD-Length (2 bytes) | AD | Initialization Vector | Block 1 | Block 2 | ... ]
+`[ MAC | AD-Length (2 bytes) | AD | Initialization Vector | Block 1 | Block 2 | ... ]`
 
 ### When to Use
 - You need both encryption and integrity protection.
