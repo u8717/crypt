@@ -2,13 +2,14 @@
 
 A collection of tools and helpers for handling sensitive data. This project is currently focused on an AES-CBC-HMAC Encryptor.
 
-**Important:** As this is a personal project, carefully review the code for correctness and security before using it.
-If you happen to see and review this code your are welcome to leave your feadback. 
+As this is a personal project, carefully review the code for correctness and security before using it.
+
+`!!!` If you happen to see and review this code you are welcome to leave your feedback. 
 
 ## AES-CBC-HMAC Encryptor
 Implements encryption and integrity protection using AES-CBC cipher mode and HMAC.
 - **Secure Encryption:** Utilizes AES-CBC mode for robust encryption.
-- **Data Integrity:** Employs HMAC (HMAC-SHA256 or similar) for ensuring data hasn't been tampered with.
+- **Data Integrity:** Employs HMAC (HMAC-SHA256 or similar) to ensure data hasn't been tampered with.
 - **Associated Data Support:** Allows inclusion of unencrypted associated data (AD) that needs authentication along with the ciphertext.
 - **Customizable HMAC:** The HMAC algorithm can be configured during setup.
 
