@@ -1,5 +1,4 @@
-# crypt
-
+# crypt (WiP)
 A collection of tools and helpers for handling sensitive data. This project is currently focused on an AES-CBC-HMAC Encryptor.
 
 As this is a personal project, carefully review the code for correctness and security before using it.
