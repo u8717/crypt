@@ -15,7 +15,7 @@ func TestAESCBCHMAC_EncryptDecrypt(t *testing.T) {
 		plaintext     []byte
 		integrityKey  []byte
 		encryptionKey []byte
-		expectedError error // To also test error cases
+		expectedError error
 	}{
 		{
 			name:          "SuccessfulEncryptionDecryption",
@@ -28,14 +28,14 @@ func TestAESCBCHMAC_EncryptDecrypt(t *testing.T) {
 			plaintext:     []byte(""),
 			integrityKey:  []byte("anothersecretintegritykey12345671234"),
 			encryptionKey: []byte("mysecretencryptionkey12345671234"),
-			expectedError: nil, // Or a specific error if your encryption library handles this
+			expectedError: nil,
 		},
 		{
 			name:          "ShortEncryptionKey",
 			plaintext:     []byte("Some data"),
 			integrityKey:  []byte("anothersecretintegritykey12345671234"),
 			encryptionKey: []byte("too_short"),
-			expectedError: fmt.Errorf("encryption key too short"), // Or the actual error from your library
+			expectedError: fmt.Errorf("encryption key too short"),
 		},
 		{
 			name:          "ShortIntegrityKey",
@@ -103,7 +103,7 @@ func TestAESCBCHMAC_Cyphertext(t *testing.T) {
 		plaintext     []byte
 		integrityKey  []byte
 		encryptionKey []byte
-		expectedError error // To also test error cases
+		expectedError error
 	}{
 		{
 			name:          "SuccessfulEncryptionDecryption",
@@ -121,7 +121,6 @@ func TestAESCBCHMAC_Cyphertext(t *testing.T) {
 			plaintext:     []byte("This is some super secret data to encrypt."),
 			expectedError: fmt.Errorf("cipherText was nil"),
 		},
-		// Add more test cases here, including some error scenarios
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -145,7 +144,7 @@ func TestAESCBCHMAC_CyphertextIsRandomized(t *testing.T) {
 		plaintext     []byte
 		integrityKey  []byte
 		encryptionKey []byte
-		expectedError error // To also test error cases
+		expectedError error
 	}{
 		{
 			name:          "SuccessfulEncryptionDecryption",
@@ -153,7 +152,6 @@ func TestAESCBCHMAC_CyphertextIsRandomized(t *testing.T) {
 			encryptionKey: []byte("mysecretencryptionkey12345671234"),
 			plaintext:     []byte("This is some super secret data to encrypt."),
 		},
-		// Add more test cases here, including some error scenarios
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
