@@ -135,9 +135,17 @@ func (cryptor decryptor) Crypt(ciphertext []byte) ([]byte, []byte, error) {
 	if len(ciphertext) < cryptor.macLenght+cryptor.pher.BlockSize() {
 		return nil, nil, fmt.Errorf("cipherText is invalid")
 	}
+	minCiphertextSize := cryptor.macLenght + additionalDataHeaderLenght + cryptor.pher.BlockSize()
+	if len(ciphertext) < minCiphertextSize {
+		return nil, nil, fmt.Errorf("cipherText is too short")
+	}
 	// Extract the HMAC from the beginning of the encrypted data.
 	adHeaderLocation := cryptor.macLenght
 	mac := ciphertext[:adHeaderLocation]
+	err := verify(mac, cryptor.integrityKey, cryptor.calcMac, generateSignature, ciphertext[adHeaderLocation:]...)
+	if err != nil {
+		return nil, nil, fmt.Errorf("Data integrity compromised %w", err)
+	}
 	// Extract additionalData lenght.
 	adLocation := adHeaderLocation + additionalDataHeaderLenght
 	adLengthHeader := ciphertext[adHeaderLocation:adLocation]
@@ -150,10 +158,6 @@ func (cryptor decryptor) Crypt(ciphertext []byte) ([]byte, []byte, error) {
 	iv := ciphertext[ivLocation:cipherTextLocation]
 	payload := ciphertext[cipherTextLocation:]
 
-	err := verify(mac, cryptor.integrityKey, cryptor.calcMac, generateSignature, ciphertext[adHeaderLocation:]...)
-	if err != nil {
-		return nil, nil, fmt.Errorf("Data integrity compromised %w", err)
-	}
 	// Init slice to hold the plaintext & decrypt.
 	dst := make([]byte, len(payload))
 	// Create a CBC decrypter and decrypt the message.

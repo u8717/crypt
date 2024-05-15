@@ -1,24 +1,32 @@
-#
-# Binaries for programs and plugins
-*.exe
-*.exe~
-*.dll
-*.so
-*.dylib
-
-# Test binary, built with `go test -c`
+# Test binaries and coverage reports
 *.test
-
-# Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
-# Dependency directories (remove the comment below to include it)
+# Dependency directories (uncomment if using Go modules)
 # vendor/
 
-# Go workspace file
-go.work
+# Go workspace files (uncomment if using Go workspaces)
+# go.work
 
-bin/*
+# IDE/Editor files and directories
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Environment variables
 .env
-#vendor
-.trunk
+
+# macOS specific
+.DS_Store
+
+# Operating system and editor backup files
+*~
+*.swp
+*.swo
+
+# Build artifacts
+bin/
+pkg/
+
+# Trunk configuration
+.trunk/
