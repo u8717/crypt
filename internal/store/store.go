@@ -9,10 +9,10 @@ import (
 
 const SPERATE = " ::: "
 const RFC3339Nano = time.RFC3339Nano
-const DATAPREFIX = "HOLD_"
-const DATASUFIX = ".holddata"
-const METAPREFIX = "HOLD_"
-const METASUFIX = ".holdmeta"
+const DATAPREFIX = "FILES_"
+const DATASUFIX = ".filesdata"
+const METAPREFIX = "FILES_"
+const METASUFIX = ".filesmeta"
 const SEPARATENAMESPACE = "$$$"
 const SEPARATETYPE = "$$$$"
 

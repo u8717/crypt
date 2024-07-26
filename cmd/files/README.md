@@ -1,6 +1,6 @@
-# hold engine
+# files engine
 
-hold engine is a simple and secure key-value store designed for data integrity and encryption.
+files engine is a simple and secure key-value store designed for data integrity and encryption.
 
 This Project is currently WiP.
 
@@ -13,11 +13,11 @@ This Project is currently WiP.
 - **Namespace Support:** Allows grouping keys under different namespaces for better organization.
 - **Sorting:** Supports sorting of keys based on specified criteria (e.g., name, timestamp, value).
 - **Pagination:** Enables pagination for efficient handling of large key sets.
-- **Import State from Logs:** Restoration of hold's state by importing data from system logs.
+- **Import State from Logs:** Restoration of files's state by importing data from system logs.
 
 ## Getting Started
 
-1. Install holdDB engine by [downloading the latest release](#) or building from source.
+1. Install filesDB engine by [downloading the latest release](#) or building from source.
 2. Set up your configuration, including integrity and encryption tokens.
 3. Use the provided CLI commands for creating, updating, deleting, merging, and listing keys.
 
@@ -25,22 +25,22 @@ This Project is currently WiP.
 
 ```bash
 # Create a new item
-holdDB create <key> <value>
+filesDB create <key> <value>
 
 # Delete an item
-holdDB delete <key>
+filesDB delete <key>
 
 # Update an item
-holdDB update <key> <value>
+filesDB update <key> <value>
 
 # Merge an item
-holdDB merge <key> <entry>
+filesDB merge <key> <entry>
 
 # Get an item
-holdDB get <key>
+filesDB get <key>
 
 # List all registered keys per namespace
-holdDB list
+filesDB list
 
 ## Configuration
 

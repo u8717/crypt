@@ -64,7 +64,7 @@ func getStore() store.Records {
 }
 
 var rootCmd = &cobra.Command{
-	Use:   "hold engine",
+	Use:   "files engine",
 	Short: "A simple and secure key-value store",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return cmd.Help()

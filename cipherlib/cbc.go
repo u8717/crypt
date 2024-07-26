@@ -1,4 +1,4 @@
-package crypt
+package cipherlib
 
 import (
 	"bytes"
@@ -14,6 +14,7 @@ import (
 	"io"
 )
 
+// Configure & init the AES-CBC+HMAC cryptor in encryption mode.
 // AES-CBC with PKCS7 padding HMAC for integrity.
 //
 //	The final encrypted string format:
@@ -48,17 +49,6 @@ import (
 //	      and later retrieved and re-encrypted, ensuring that a new, unique nonce is used each time can be challenging.
 //
 // Since this is a one-person project, ensure you review the code before using it to validate its security and correctness.
-type Encryptor interface {
-	// Encrypts/Decrypts a message, misuse may lead to a panic.
-	Crypt(message []byte, additionalData []byte) ([]byte, error)
-}
-
-type Decryptor interface {
-	// Encrypts/Decrypts a message, misuse may lead to a panic.
-	Crypt(cipherpackage []byte) ([]byte, []byte, error)
-}
-
-// Configure & init the AES-CBC+HMAC cryptor in encryption mode.
 func NewCBCHMACEncryptor(encyptionKey []byte, integrityKey []byte, calculateMAC func() hash.Hash) (Encryptor, error) {
 	cry, err := newCBCHMACryptor(encyptionKey, integrityKey, calculateMAC)
 	if err != nil {

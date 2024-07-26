@@ -1,4 +1,4 @@
-package crypt_test
+package cipherlib_test
 
 import (
 	"bytes"
@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/u8717/crypt"
+	"github.com/u8717/crypt/cipherlib"
 )
 
 func TestAESCBCHMAC_EncryptDecrypt(t *testing.T) {
@@ -176,7 +176,7 @@ func TestAESCBCHMAC_CyphertextIsRandomized(t *testing.T) {
 
 func testEncrypt(t *testing.T, encryptionKey []byte, integrityKey []byte, plaintext []byte) ([]byte, error) {
 	t.Helper()
-	encrypter, err := crypt.NewCBCHMACEncryptor(encryptionKey, integrityKey, sha256.New)
+	encrypter, err := cipherlib.NewCBCHMACEncryptor(encryptionKey, integrityKey, sha256.New)
 	if err != nil {
 		return nil, err
 	}
@@ -194,7 +194,7 @@ func testEncrypt(t *testing.T, encryptionKey []byte, integrityKey []byte, plaint
 
 func testDecrypt(t *testing.T, encryptionKey []byte, integrityKey []byte, ciphertext []byte) ([]byte, error) {
 	t.Helper()
-	decrypter, err := crypt.NewCBCHMACDecryptor(encryptionKey, integrityKey, sha256.New)
+	decrypter, err := cipherlib.NewCBCHMACDecryptor(encryptionKey, integrityKey, sha256.New)
 	if err != nil {
 		return nil, err
 	}
