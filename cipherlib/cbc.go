@@ -54,7 +54,8 @@ func NewCBCHMACEncryptor(encyptionKey []byte, integrityKey []byte, calculateMAC 
 	if err != nil {
 		return nil, err
 	}
-	return (encryptor)(cry), nil
+
+	return (encryptorCBCHMAC)(cry), nil
 }
 
 // Configure & init the AES-CBC+HMAC cryptor in decryption mode.
@@ -63,13 +64,13 @@ func NewCBCHMACDecryptor(encyptionKey []byte, integrityKey []byte, calculateMAC 
 	if err != nil {
 		return nil, err
 	}
-	return (decryptor)(cry), nil
+	return (decryptorCBCHMAC)(cry), nil
 }
 
-// Cncryption mode of the cryptor.
-type encryptor cryptor
+// Encryption mode of the cryptor.
+type encryptorCBCHMAC cryptorCBCHMAC
 
-func (crytor encryptor) Crypt(message []byte, additionalData []byte) ([]byte, error) {
+func (crytor encryptorCBCHMAC) Crypt(message []byte, additionalData []byte) ([]byte, error) {
 	if message == nil {
 		return nil, fmt.Errorf("message was nil")
 	}
@@ -88,7 +89,7 @@ func (crytor encryptor) Crypt(message []byte, additionalData []byte) ([]byte, er
 	return crytor.seal(iv, payload, additionalData), nil
 }
 
-func (crytor encryptor) seal(iv []byte, plaintext []byte, additionalData []byte) []byte {
+func (crytor encryptorCBCHMAC) seal(iv []byte, plaintext []byte, additionalData []byte) []byte {
 	// Calculate the total size needed for HMAC, additionalData header, additionalData, IV, encrypted data.
 	cypherLen := len(plaintext) + crytor.pher.BlockSize() + crytor.macLenght + additionalDataHeaderLenght + len(additionalData)
 	// Contruct slice to hold the encrypted text & Encrypt.
@@ -116,9 +117,9 @@ func (crytor encryptor) seal(iv []byte, plaintext []byte, additionalData []byte)
 }
 
 // Decryption mode of the cryptor.
-type decryptor cryptor
+type decryptorCBCHMAC cryptorCBCHMAC
 
-func (cryptor decryptor) Crypt(ciphertext []byte) ([]byte, []byte, error) {
+func (cryptor decryptorCBCHMAC) Crypt(ciphertext []byte) ([]byte, []byte, error) {
 	if ciphertext == nil {
 		return nil, nil, fmt.Errorf("cipherText was nil")
 	}
@@ -165,7 +166,7 @@ func (cryptor decryptor) Crypt(ciphertext []byte) ([]byte, []byte, error) {
 	return message, additionalData, nil
 }
 
-type cryptor struct {
+type cryptorCBCHMAC struct {
 	pher         cipher.Block
 	macLenght    int
 	calcMac      func() hash.Hash
@@ -173,29 +174,29 @@ type cryptor struct {
 }
 
 // Configure & init the AES-CBC+HMAC Cryptor in encryption mode.
-func newCBCHMACryptor(encyptionKey []byte, integrityKey []byte, calculateMAC func() hash.Hash) (cryptor, error) {
+func newCBCHMACryptor(encyptionKey []byte, integrityKey []byte, calculateMAC func() hash.Hash) (cryptorCBCHMAC, error) {
 	const minKeySize = 16 // Replace with the desired minimum key size
 
 	// Check key sizes.
 	if len(encyptionKey) < minKeySize {
-		return cryptor{}, fmt.Errorf("encryption key too short")
+		return cryptorCBCHMAC{}, fmt.Errorf("encryption key too short")
 	}
 	if len(integrityKey) < minKeySize {
-		return cryptor{}, fmt.Errorf("integrity key too short")
+		return cryptorCBCHMAC{}, fmt.Errorf("integrity key too short")
 	}
 
 	// Check if the encryption key and integrity key are the same.
 	if bytes.Equal(encyptionKey, integrityKey) {
-		return cryptor{}, fmt.Errorf("using same key for encryption and integrity is not allowed")
+		return cryptorCBCHMAC{}, fmt.Errorf("using same key for encryption and integrity is not allowed")
 	}
 	block, err := aes.NewCipher(encyptionKey)
 	if err != nil {
-		return cryptor{}, err
+		return cryptorCBCHMAC{}, err
 	}
 
 	newintegrityKey := make([]byte, len(integrityKey))
 	copy(newintegrityKey, integrityKey)
-	return cryptor{
+	return cryptorCBCHMAC{
 		pher:         block,
 		macLenght:    calculateMAC().Size(),
 		integrityKey: newintegrityKey,
