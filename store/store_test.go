@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/u8717/crypt/internal/store"
+	"github.com/u8717/crypt/store"
 )
 
 func TestRecordsStore(t *testing.T) {

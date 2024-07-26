@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/u8717/crypt/internal/persist"
+	"github.com/u8717/crypt/persist"
 )
 
 type Manager struct {
