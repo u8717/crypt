@@ -72,7 +72,7 @@ type encryptorCBCHMAC cryptorCBCHMAC
 
 func (crytor encryptorCBCHMAC) Crypt(message []byte, additionalData []byte) ([]byte, error) {
 	if message == nil {
-		return nil, fmt.Errorf("message was nil")
+		return nil, MessageError("message was nil")
 	}
 	// Apply PKCS#7 padding to the input data.
 	pad := padPKCS7(len(message), crytor.pher.BlockSize())
@@ -121,14 +121,14 @@ type decryptorCBCHMAC cryptorCBCHMAC
 
 func (cryptor decryptorCBCHMAC) Crypt(ciphertext []byte) ([]byte, []byte, error) {
 	if ciphertext == nil {
-		return nil, nil, fmt.Errorf("cipherText was nil")
+		return nil, nil, CipherTextError("cipherText was nil")
 	}
 	if len(ciphertext) < cryptor.macLenght+cryptor.pher.BlockSize() {
-		return nil, nil, fmt.Errorf("cipherText is invalid")
+		return nil, nil, CipherTextError("cipherText is invalid")
 	}
 	minCiphertextSize := cryptor.macLenght + additionalDataHeaderLenght + cryptor.pher.BlockSize()
 	if len(ciphertext) < minCiphertextSize {
-		return nil, nil, fmt.Errorf("cipherText is too short")
+		return nil, nil, CipherTextError("cipherText is too short")
 	}
 	// Extract the HMAC from the beginning of the encrypted data.
 	adHeaderLocation := cryptor.macLenght
@@ -179,15 +179,15 @@ func newCBCHMACryptor(encyptionKey []byte, integrityKey []byte, calculateMAC fun
 
 	// Check key sizes.
 	if len(encyptionKey) < minKeySize {
-		return cryptorCBCHMAC{}, fmt.Errorf("encryption key too short")
+		return cryptorCBCHMAC{}, EncryptionKeyError("encryption key too short")
 	}
 	if len(integrityKey) < minKeySize {
-		return cryptorCBCHMAC{}, fmt.Errorf("integrity key too short")
+		return cryptorCBCHMAC{}, EncryptionKeyError("integrity key too short")
 	}
 
 	// Check if the encryption key and integrity key are the same.
 	if bytes.Equal(encyptionKey, integrityKey) {
-		return cryptorCBCHMAC{}, fmt.Errorf("using same key for encryption and integrity is not allowed")
+		return cryptorCBCHMAC{}, InvalidUsageError("using same key for encryption and integrity is not allowed")
 	}
 	block, err := aes.NewCipher(encyptionKey)
 	if err != nil {

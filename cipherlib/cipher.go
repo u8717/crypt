@@ -13,3 +13,27 @@ type Decryptor interface {
 	// Encrypts/Decrypts a message, misuse may lead to a panic.
 	Crypt(cipherpackage []byte) ([]byte, []byte, error)
 }
+
+type (
+	MessageError       string
+	CipherTextError    string
+	EncryptionKeyError string
+	IntegrityKeyError  string
+	InvalidUsageError  string
+)
+
+func (e MessageError) Error() string {
+	return (string)(e)
+}
+func (e CipherTextError) Error() string {
+	return (string)(e)
+}
+func (e EncryptionKeyError) Error() string {
+	return (string)(e)
+}
+func (e IntegrityKeyError) Error() string {
+	return (string)(e)
+}
+func (e InvalidUsageError) Error() string {
+	return (string)(e)
+}

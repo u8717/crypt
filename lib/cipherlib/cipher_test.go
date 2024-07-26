@@ -2,6 +2,7 @@ package cipherlib_test
 
 import (
 	"bytes"
+	"crypto/rand"
 	"crypto/sha256"
 	"fmt"
 	"testing"
@@ -75,14 +76,35 @@ func TestAESCBCHMAC_EncryptDecrypt(t *testing.T) {
 	}
 	for i, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			cypher, err := testEncrypt(t, tc.encryptionKey, tc.integrityKey, tc.plaintext)
+			cypher, err := testEncryptCBC(t, tc.encryptionKey, tc.integrityKey, tc.plaintext)
 			if fmt.Sprint(err) != fmt.Sprint(tc.expectedError) {
 				t.Fatalf(err.Error())
 			}
 			if tc.expectedError != nil {
 				return
 			}
-			decryptedText, err := testDecrypt(t, tc.encryptionKey, tc.integrityKey, cypher)
+			decryptedText, err := testDecryptCBC(t, tc.encryptionKey, tc.integrityKey, cypher)
+			if fmt.Sprint(err) != fmt.Sprint(tc.expectedError) {
+				t.Fatalf("%v : %v : %v", err.Error(), tc.expectedError, i)
+			}
+			if tc.expectedError != nil {
+				return
+			}
+			if !bytes.Equal(decryptedText, tc.plaintext) {
+				t.Fatal(fmt.Errorf("Decrypted data doesn't match original plaintext: %s : %s", decryptedText, tc.plaintext))
+			}
+		})
+	}
+	for i, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			cypher, err := testEncryptGCM(t, tc.encryptionKey, tc.plaintext)
+			if fmt.Sprint(err) != fmt.Sprint(tc.expectedError) {
+				t.Fatalf(err.Error())
+			}
+			if tc.expectedError != nil {
+				return
+			}
+			decryptedText, err := testDecryptGCM(t, tc.encryptionKey, cypher)
 			if fmt.Sprint(err) != fmt.Sprint(tc.expectedError) {
 				t.Fatalf("%v : %v : %v", err.Error(), tc.expectedError, i)
 			}
@@ -124,7 +146,21 @@ func TestAESCBCHMAC_Cyphertext(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			decryptedText, err := testDecrypt(t, tc.encryptionKey, tc.integrityKey, tc.cypher)
+			decryptedText, err := testDecryptCBC(t, tc.encryptionKey, tc.integrityKey, tc.cypher)
+			if fmt.Sprint(err) != fmt.Sprint(tc.expectedError) {
+				t.Fatalf(err.Error())
+			}
+			if tc.expectedError != nil {
+				return
+			}
+			if !bytes.Equal(decryptedText, tc.plaintext) {
+				t.Fatal(fmt.Errorf("Decrypted data doesn't match original plaintext: %s : %s", decryptedText, tc.plaintext))
+			}
+		})
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			decryptedText, err := testDecryptCBC(t, tc.encryptionKey, tc.integrityKey, tc.cypher)
 			if fmt.Sprint(err) != fmt.Sprint(tc.expectedError) {
 				t.Fatalf(err.Error())
 			}
@@ -157,7 +193,7 @@ func TestAESCBCHMAC_CyphertextIsRandomized(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			cyphers := make([][]byte, 10)
 			for i := range cyphers {
-				cypher, err := testEncrypt(t, tc.encryptionKey, tc.integrityKey, tc.plaintext)
+				cypher, err := testEncryptCBC(t, tc.encryptionKey, tc.integrityKey, tc.plaintext)
 				if fmt.Sprint(err) != fmt.Sprint(tc.expectedError) {
 					t.Fatalf(err.Error())
 				}
@@ -174,7 +210,7 @@ func TestAESCBCHMAC_CyphertextIsRandomized(t *testing.T) {
 	}
 }
 
-func testEncrypt(t *testing.T, encryptionKey []byte, integrityKey []byte, plaintext []byte) ([]byte, error) {
+func testEncryptCBC(t *testing.T, encryptionKey []byte, integrityKey []byte, plaintext []byte) ([]byte, error) {
 	t.Helper()
 	encrypter, err := cipherlib.NewCBCHMACEncryptor(encryptionKey, integrityKey, sha256.New)
 	if err != nil {
@@ -192,9 +228,41 @@ func testEncrypt(t *testing.T, encryptionKey []byte, integrityKey []byte, plaint
 	return ciphertext, nil
 }
 
-func testDecrypt(t *testing.T, encryptionKey []byte, integrityKey []byte, ciphertext []byte) ([]byte, error) {
+func testDecryptCBC(t *testing.T, encryptionKey []byte, integrityKey []byte, ciphertext []byte) ([]byte, error) {
 	t.Helper()
 	decrypter, err := cipherlib.NewCBCHMACDecryptor(encryptionKey, integrityKey, sha256.New)
+	if err != nil {
+		return nil, err
+	}
+	decryptedText, _, err := decrypter.Crypt(ciphertext)
+	if err != nil {
+		return nil, err
+	}
+
+	return decryptedText, nil
+}
+
+func testEncryptGCM(t *testing.T, encryptionKey []byte, plaintext []byte) ([]byte, error) {
+	t.Helper()
+	encrypter, err := cipherlib.NewGCMEncryptor(encryptionKey, rand.Reader)
+	if err != nil {
+		return nil, err
+	}
+
+	ciphertext, err := encrypter.Crypt(plaintext, nil)
+	if err != nil {
+		return nil, err
+	}
+	if len(ciphertext) == 0 {
+		return nil, fmt.Errorf("ciphertext empty")
+	}
+
+	return ciphertext, nil
+}
+
+func testDecryptGCM(t *testing.T, encryptionKey []byte, ciphertext []byte) ([]byte, error) {
+	t.Helper()
+	decrypter, err := cipherlib.NewGCMDecryptor(encryptionKey)
 	if err != nil {
 		return nil, err
 	}
