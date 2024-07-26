@@ -144,7 +144,7 @@ func (cryptor decryptor) Crypt(ciphertext []byte) ([]byte, []byte, error) {
 	mac := ciphertext[:adHeaderLocation]
 	err := verify(mac, cryptor.integrityKey, cryptor.calcMac, generateSignature, ciphertext[adHeaderLocation:]...)
 	if err != nil {
-		return nil, nil, fmt.Errorf("Data integrity compromised %w", err)
+		return nil, nil, fmt.Errorf("data integrity compromised %w", err)
 	}
 	// Extract additionalData lenght.
 	adLocation := adHeaderLocation + additionalDataHeaderLenght

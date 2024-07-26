@@ -1,10 +1,14 @@
 package main
 
 import (
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/u8717/crypt"
@@ -94,4 +98,43 @@ func encrypt(encryptionKey []byte, integrityKey []byte, input []byte) string {
 	}
 
 	return base64.StdEncoding.EncodeToString(output)
+}
+
+func decryptGCM(encryptionKey []byte, input []byte) string {
+	block, err := aes.NewCipher(encryptionKey)
+	if err != nil {
+		panic(err.Error())
+	}
+	aesgcm, err := cipher.NewGCM(block)
+	if err != nil {
+		panic(err.Error())
+	}
+	nonce := input[:aesgcm.NonceSize()]
+	ciphertext, err := aesgcm.Open(nil, nonce, input, nil)
+	if err != nil {
+		panic(err.Error())
+	}
+	vault := make([]byte, len(ciphertext)+len(nonce))
+	copy(vault, nonce)
+	copy(vault[:len(nonce)], ciphertext)
+
+	return string(vault)
+}
+
+func encryptGCM(encryptionKey []byte, input []byte) string {
+	block, err := aes.NewCipher(encryptionKey)
+	if err != nil {
+		panic(err.Error())
+	}
+	aesgcm, err := cipher.NewGCM(block)
+	if err != nil {
+		panic(err.Error())
+	}
+	nonce := make([]byte, aesgcm.NonceSize())
+	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+		panic(err.Error())
+	}
+	ciphertext := aesgcm.Seal(nil, nonce, input, nil)
+
+	return string(ciphertext)
 }
