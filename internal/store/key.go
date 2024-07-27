@@ -6,6 +6,7 @@ import (
 	"time"
 )
 
+// TODO remove namespace
 type Key struct {
 	Kind       kind
 	Namespace  string

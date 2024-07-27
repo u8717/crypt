@@ -16,6 +16,7 @@ import (
 
 type Secret string
 
+// TODO Replace with cipherlib
 type Crypt interface {
 	Encrypt(plaintext string, token Secret) (string, error)
 	Decrypt(ciphertext string, token Secret) (string, error)
