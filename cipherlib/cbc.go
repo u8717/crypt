@@ -74,6 +74,9 @@ func (crytor encryptorCBCHMAC) Crypt(message []byte, additionalData []byte) ([]b
 	if message == nil {
 		return nil, MessageError("message was nil")
 	}
+	if len(additionalData) > maxAdditionalDataSize {
+		return nil, MessageError("additional data too large")
+	}
 	// Apply PKCS#7 padding to the input data.
 	pad := padPKCS7(len(message), crytor.pher.BlockSize())
 	payload := make([]byte, len(message)+len(pad))
@@ -251,3 +254,4 @@ func verify(hmac, token []byte, hashing func() hash.Hash, should func(token []by
 }
 
 const additionalDataHeaderLength = 2
+const maxAdditionalDataSize = 65535

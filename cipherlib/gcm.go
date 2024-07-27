@@ -65,25 +65,35 @@ func (e encryptorGCM) Crypt(message []byte, additionalData []byte) ([]byte, erro
 		return nil, MessageError("message was nil")
 	}
 	if uint64(len(message)) > uint64(((1<<32)-2)*e.blocksize()) {
-		return nil, MessageError("crypto/cipherlib: message too large for GCM")
+		return nil, MessageError("message too large for GCM")
 	}
+	if len(additionalData) > maxAdditionalDataSize {
+		return nil, MessageError("additional data too large")
+	}
+
 	nonce := make([]byte, e.gcm.NonceSize())
 	if _, err := io.ReadFull(e.rand, nonce); err != nil {
 		return nil, err
 	}
 
 	// Allocate space for the cipherpackage
-	cipherpackage := make([]byte, additionalDataHeaderLength+len(additionalData)+len(nonce)+len(message)+e.gcm.Overhead())
+	cipherpackage := make([]byte, len(nonce)+additionalDataHeaderLength+len(additionalData)+len(message)+e.gcm.Overhead())
+
+	// Define locations
+	nonceLocation := 0
+	adHeaderHeaderLocation := nonceLocation + len(nonce)
+	adHeaderLocation := adHeaderHeaderLocation + additionalDataHeaderLength
+	dataLocation := adHeaderLocation + len(additionalData)
 
 	// Copy nonce to the beginning of the cipherpackage
-	copy(cipherpackage, nonce)
+	copy(cipherpackage[nonceLocation:adHeaderHeaderLocation], nonce)
 
 	// Copy additional data length and additional data into cipherpackage
-	binary.BigEndian.PutUint16(cipherpackage[len(nonce):len(nonce)+additionalDataHeaderLength], uint16(len(additionalData)))
-	copy(cipherpackage[len(nonce)+additionalDataHeaderLength:len(nonce)+additionalDataHeaderLength+len(additionalData)], additionalData)
+	binary.BigEndian.PutUint16(cipherpackage[adHeaderHeaderLocation:adHeaderLocation], uint16(len(additionalData)))
+	copy(cipherpackage[adHeaderLocation:dataLocation], additionalData)
 
 	// Encrypt the message
-	e.gcm.Seal(cipherpackage[len(nonce)+additionalDataHeaderLength+len(additionalData):len(nonce)+additionalDataHeaderLength+len(additionalData)], nonce, message, additionalData)
+	e.gcm.Seal(cipherpackage[dataLocation:dataLocation], nonce, message, additionalData)
 
 	return cipherpackage, nil
 }
@@ -91,26 +101,33 @@ func (e encryptorGCM) Crypt(message []byte, additionalData []byte) ([]byte, erro
 // Crypt decrypts the given cipher package using AES-GCM.
 func (d decryptorGCM) Crypt(cipherpackage []byte) ([]byte, []byte, error) {
 	nonceSize := d.gcm.NonceSize()
+	const additionalDataHeaderLength = 2
 
 	if len(cipherpackage) < nonceSize+additionalDataHeaderLength {
 		return nil, nil, errors.New("cipherpackage too short")
 	}
 
-	// Extract the nonce
-	nonce := cipherpackage[:nonceSize]
+	// Define locations
+	nonceLocation := 0
+	adHeaderHeaderLocation := nonceLocation + nonceSize
+	adHeaderLocation := adHeaderHeaderLocation + additionalDataHeaderLength
+	dataLocation := adHeaderLocation + int(binary.BigEndian.Uint16(cipherpackage[adHeaderHeaderLocation:adHeaderLocation]))
 
-	// Extract the additional data length
-	additionalDataLength := binary.BigEndian.Uint16(cipherpackage[nonceSize : nonceSize+additionalDataHeaderLength])
-
-	if len(cipherpackage) < nonceSize+additionalDataHeaderLength+int(additionalDataLength) {
+	if len(cipherpackage) < dataLocation {
 		return nil, nil, errors.New("cipherpackage too short for additional data")
 	}
 
+	// Extract the nonce
+	nonce := cipherpackage[nonceLocation:adHeaderHeaderLocation]
+
+	// Extract the additional data length
+	additionalDataLength := binary.BigEndian.Uint16(cipherpackage[adHeaderHeaderLocation:adHeaderLocation])
+
 	// Extract the additional data
-	additionalData := cipherpackage[nonceSize+additionalDataHeaderLength : nonceSize+additionalDataHeaderLength+int(additionalDataLength)]
+	additionalData := cipherpackage[adHeaderLocation : adHeaderLocation+int(additionalDataLength)]
 
 	// Extract the ciphertext
-	ciphertext := cipherpackage[nonceSize+additionalDataHeaderLength+int(additionalDataLength):]
+	ciphertext := cipherpackage[adHeaderLocation+int(additionalDataLength):]
 
 	// Decrypt the ciphertext
 	plaintext, err := d.gcm.Open(nil, nonce, ciphertext, additionalData)
