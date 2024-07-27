@@ -3,6 +3,7 @@ package cipherlib
 import (
 	"crypto/aes"
 	"crypto/cipher"
+	"encoding/binary"
 	"errors"
 	"io"
 )
@@ -70,22 +71,52 @@ func (e encryptorGCM) Crypt(message []byte, additionalData []byte) ([]byte, erro
 	if _, err := io.ReadFull(e.rand, nonce); err != nil {
 		return nil, err
 	}
-	ciphertext := e.gcm.Seal(nonce, nonce, message, additionalData)
 
-	return ciphertext, nil
+	// Allocate space for the cipherpackage
+	cipherpackage := make([]byte, additionalDataHeaderLength+len(additionalData)+len(nonce)+len(message)+e.gcm.Overhead())
+
+	// Copy nonce to the beginning of the cipherpackage
+	copy(cipherpackage, nonce)
+
+	// Copy additional data length and additional data into cipherpackage
+	binary.BigEndian.PutUint16(cipherpackage[len(nonce):len(nonce)+additionalDataHeaderLength], uint16(len(additionalData)))
+	copy(cipherpackage[len(nonce)+additionalDataHeaderLength:len(nonce)+additionalDataHeaderLength+len(additionalData)], additionalData)
+
+	// Encrypt the message
+	e.gcm.Seal(cipherpackage[len(nonce)+additionalDataHeaderLength+len(additionalData):len(nonce)+additionalDataHeaderLength+len(additionalData)], nonce, message, additionalData)
+
+	return cipherpackage, nil
 }
 
 // Crypt decrypts the given cipher package using AES-GCM.
 func (d decryptorGCM) Crypt(cipherpackage []byte) ([]byte, []byte, error) {
 	nonceSize := d.gcm.NonceSize()
-	if len(cipherpackage) < nonceSize {
-		return nil, nil, errors.New("ciphertext too short")
+
+	if len(cipherpackage) < nonceSize+additionalDataHeaderLength {
+		return nil, nil, errors.New("cipherpackage too short")
 	}
-	nonce, ciphertext := cipherpackage[:nonceSize], cipherpackage[nonceSize:]
-	plaintext, err := d.gcm.Open(nil, nonce, ciphertext, nil)
+
+	// Extract the nonce
+	nonce := cipherpackage[:nonceSize]
+
+	// Extract the additional data length
+	additionalDataLength := binary.BigEndian.Uint16(cipherpackage[nonceSize : nonceSize+additionalDataHeaderLength])
+
+	if len(cipherpackage) < nonceSize+additionalDataHeaderLength+int(additionalDataLength) {
+		return nil, nil, errors.New("cipherpackage too short for additional data")
+	}
+
+	// Extract the additional data
+	additionalData := cipherpackage[nonceSize+additionalDataHeaderLength : nonceSize+additionalDataHeaderLength+int(additionalDataLength)]
+
+	// Extract the ciphertext
+	ciphertext := cipherpackage[nonceSize+additionalDataHeaderLength+int(additionalDataLength):]
+
+	// Decrypt the ciphertext
+	plaintext, err := d.gcm.Open(nil, nonce, ciphertext, additionalData)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return plaintext, nil, nil
+	return plaintext, additionalData, nil
 }

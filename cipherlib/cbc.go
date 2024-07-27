@@ -91,14 +91,14 @@ func (crytor encryptorCBCHMAC) Crypt(message []byte, additionalData []byte) ([]b
 
 func (crytor encryptorCBCHMAC) seal(iv []byte, plaintext []byte, additionalData []byte) []byte {
 	// Calculate the total size needed for HMAC, additionalData header, additionalData, IV, encrypted data.
-	cypherLen := len(plaintext) + crytor.pher.BlockSize() + crytor.macLenght + additionalDataHeaderLenght + len(additionalData)
+	cypherLen := len(plaintext) + crytor.pher.BlockSize() + crytor.macLenght + additionalDataHeaderLength + len(additionalData)
 	// Contruct slice to hold the encrypted text & Encrypt.
 	cypherParcel := make([]byte, cypherLen)
 	// Calculate AD length
 	adLength := uint16(len(additionalData))
 	// Encode AD length into bytes & copy it into the parcel.
 	adHeaderLocation := crytor.macLenght
-	adLocation := adHeaderLocation + additionalDataHeaderLenght
+	adLocation := adHeaderLocation + additionalDataHeaderLength
 	binary.BigEndian.PutUint16(cypherParcel[adHeaderLocation:adLocation], adLength)
 	ivLocation := adLocation + len(additionalData)
 	copy(cypherParcel[adLocation:ivLocation], additionalData)
@@ -126,7 +126,7 @@ func (cryptor decryptorCBCHMAC) Crypt(ciphertext []byte) ([]byte, []byte, error)
 	if len(ciphertext) < cryptor.macLenght+cryptor.pher.BlockSize() {
 		return nil, nil, CipherTextError("cipherText is invalid")
 	}
-	minCiphertextSize := cryptor.macLenght + additionalDataHeaderLenght + cryptor.pher.BlockSize()
+	minCiphertextSize := cryptor.macLenght + additionalDataHeaderLength + cryptor.pher.BlockSize()
 	if len(ciphertext) < minCiphertextSize {
 		return nil, nil, CipherTextError("cipherText is too short")
 	}
@@ -138,7 +138,7 @@ func (cryptor decryptorCBCHMAC) Crypt(ciphertext []byte) ([]byte, []byte, error)
 		return nil, nil, fmt.Errorf("data integrity compromised %w", err)
 	}
 	// Extract additionalData lenght.
-	adLocation := adHeaderLocation + additionalDataHeaderLenght
+	adLocation := adHeaderLocation + additionalDataHeaderLength
 	adLengthHeader := ciphertext[adHeaderLocation:adLocation]
 	adLength := binary.BigEndian.Uint16(adLengthHeader)
 	// Exctract the additional data.
@@ -250,4 +250,4 @@ func verify(hmac, token []byte, hashing func() hash.Hash, should func(token []by
 	return nil
 }
 
-const additionalDataHeaderLenght = 2
+const additionalDataHeaderLength = 2
