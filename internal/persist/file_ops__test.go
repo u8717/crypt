@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/u8717/crypt/persist"
+	"github.com/u8717/crypt/internal/persist"
 )
 
 func TestDefaultFileOps(t *testing.T) {
