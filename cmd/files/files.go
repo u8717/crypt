@@ -12,11 +12,12 @@ import (
 )
 
 var (
-	integrityToken, encryptionToken string
-	namespace                       string
-	page                            int
-	pageSize                        int
-	sortKeys                        bool
+	location        string
+	integrityToken  string
+	encryptionToken string
+	page            int
+	pageSize        int
+	sortKeys        bool
 )
 
 // Command definitions
@@ -47,7 +48,7 @@ var (
 
 	listCmd = &cobra.Command{
 		Use:   "list",
-		Short: "List all registered keys per namespace",
+		Short: "List all registered keys",
 		Run:   listCommandFunc,
 	}
 
@@ -190,41 +191,22 @@ func listCommandFunc(cmd *cobra.Command, args []string) {
 func init() {
 	rootCmd.PersistentFlags().StringVarP(
 		&encryptionToken,
-		"encryptionToken", "k", "",
+		"encryptionToken", "e", "",
 		"Encryption token used for encrypting and decrypting data.",
 	)
 
 	rootCmd.PersistentFlags().StringVarP(
-		&namespace,
-		"namespace", "n", "default",
-		"Namespace used to group keys. If omitted, namespace will be set to default.",
-	)
-
-	rootCmd.PersistentFlags().StringVarP(
 		&integrityToken,
-		"integrityToken", "s", "",
+		"integrityToken", "i", "",
 		"Integrity token used for signing and verifying data integrity.",
 	)
 
+	rootCmd.PersistentFlags().StringVarP(
+		&location,
+		"location", "l", "",
+		"Root folder for the filesystem.",
+	)
 	rootCmd.AddCommand(createCmd, deleteCmd, updateCmd, getCmd, listCmd)
-
-	listCmd.PersistentFlags().BoolVarP(
-		&sortKeys,
-		"sort", "r", false,
-		"Sort keys alphabetically.",
-	)
-
-	listCmd.PersistentFlags().IntVarP(
-		&page,
-		"page", "p", 1,
-		"Page number for pagination.",
-	)
-
-	listCmd.PersistentFlags().IntVarP(
-		&pageSize,
-		"pagesize", "s", 10,
-		"Number of keys to display per page.",
-	)
 }
 
 func main() {
