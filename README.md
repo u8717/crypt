@@ -32,7 +32,7 @@ The encrypted message package has the following structure:
 
 ### AES-GCM
 
-AES-GCM implements encryption, integrity, and authenticity using AES-GCM mode via a single operation.
+Located in `libcipher`, AES-GCM implements encryption, integrity, and authenticity using AES-GCM mode via a single operation.
 
 **Message Format:**
 `[Nonce] | AD-Length (2 bytes) | AD | [Ciphertext] | [Authentication Tag]`
