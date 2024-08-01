@@ -1,263 +1,217 @@
 package main
 
 import (
-	"bufio"
+	"crypto/sha256"
 	"fmt"
-	"io"
+	"log"
 	"log/slog"
-	"strings"
-	"time"
+	"sort"
 
 	"github.com/spf13/cobra"
-	"github.com/u8717/crypt/internal/store"
+	"github.com/u8717/crypt/libstore"
 )
 
-// TODO Make changing secrets possible
-// TODO Index
-// TODO more unittests
-var encryptionToken store.Secret
-var integrityToken store.Secret
-var namespace string
-var page int
-var pageSize int
-var sortKeys bool
+var (
+	integrityToken, encryptionToken string
+	namespace                       string
+	page                            int
+	pageSize                        int
+	sortKeys                        bool
+)
 
-var createCmd = &cobra.Command{
-	Use:   "create <id> <value>",
-	Short: "Create a new item",
-	Run:   createCommandFunc,
+// Command definitions
+var (
+	createCmd = &cobra.Command{
+		Use:   "create <id> <value>",
+		Short: "Create a new item",
+		Run:   createCommandFunc,
+	}
+
+	deleteCmd = &cobra.Command{
+		Use:   "delete <id>",
+		Short: "Delete an item",
+		Run:   deleteCommandFunc,
+	}
+
+	updateCmd = &cobra.Command{
+		Use:   "update <id> <value>",
+		Short: "Update an item",
+		Run:   updateCommandFunc,
+	}
+
+	getCmd = &cobra.Command{
+		Use:   "get <id>",
+		Short: "Get an item",
+		Run:   getCommandFunc,
+	}
+
+	listCmd = &cobra.Command{
+		Use:   "list",
+		Short: "List all registered keys per namespace",
+		Run:   listCommandFunc,
+	}
+
+	rootCmd = &cobra.Command{
+		Use:   "files engine",
+		Short: "A simple and secure key-value store",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return cmd.Help()
+		},
+	}
+)
+
+// Initialize the store
+func getStore() libstore.Ops {
+	ops, err := libstore.NewFileOps(".")
+	if err != nil {
+		log.Fatalf("Failed to initialize file operations: %v", err)
+	}
+	manager, err := libstore.NewManager(ops, []byte(encryptionToken), []byte(integrityToken), sha256.New)
+	if err != nil {
+		log.Fatalf("Failed to initialize cryptographic manager: %v", err)
+	}
+	return manager
 }
 
-var deleteCmd = &cobra.Command{
-	Use:   "delete <id>",
-	Short: "Delete an item",
-	Run:   deleteCommandFunc,
-}
-
-var updateCmd = &cobra.Command{
-	Use:   "update <id> <value>",
-	Short: "Update an item",
-	Run:   updateCommandFunc,
-}
-
-var mergeCmd = &cobra.Command{
-	Use:   "merge <id> <entry>",
-	Short: "Merge an item",
-	Run:   mergeCommandFunc,
-}
-
-var getCmd = &cobra.Command{
-	Use:   "get <id>",
-	Short: "Get an item",
-	Run:   getCommandFunc,
-}
-
-var listCmd = &cobra.Command{
-	Use:   "list",
-	Short: "List all registered keys per namespace",
-	Run:   listCommandFunc,
-}
-
-func getStore() store.Records {
-	return store.NewManger(".")
-}
-
-var rootCmd = &cobra.Command{
-	Use:   "files engine",
-	Short: "A simple and secure key-value store",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return cmd.Help()
-	},
-}
-
+// Create command function
 func createCommandFunc(cmd *cobra.Command, args []string) {
 	if len(args) < 1 {
 		slog.Error("Insufficient arguments for create command.")
-		cmd.Help()
+		err := cmd.Help()
+		if err != nil {
+			log.Fatalf(err.Error())
+		}
 		return
 	}
 
-	id := args[0]
-	key, err := validateFlags(id, "create")
-	if err != nil {
-		slog.Error("Creating item", "id", id, "error", err)
-		return
+	id, value := args[0], ""
+	if len(args) > 1 {
+		value = args[1]
 	}
-	err = getStore().Register(integrityToken, encryptionToken, key)
-	if err != nil {
-		slog.Error("Creating item", "id", id, "error", err)
-		return
-	}
-	if len(args) <= 1 {
-		return
-	}
-	value := args[1]
 
-	if value == "" {
+	store := getStore()
+	if err := store.Create(id); err != nil {
+		slog.Error("Failed to create item", "id", id, "error", err)
 		return
 	}
 
-	ts := time.Now().UTC()
-	signature, payload, err := getStore().Insert(integrityToken, encryptionToken, ts, key, value)
-	if err != nil {
-		slog.Error("Creating item", "id", id, "value", value, "error", err)
-		return
-	}
-	fmt.Printf("%s%s%s%s%s%s%s\n", signature, store.SPERATE, ts.Format(store.RFC3339Nano), store.SPERATE, id, store.SPERATE, payload)
-
-}
-
-func deleteCommandFunc(cmd *cobra.Command, args []string) {
-	if len(args) < 1 {
-		slog.Error("Insufficient arguments for delete command.")
-		cmd.Help()
-		return
-	}
-
-	id := args[0]
-	key, err := validateFlags(id, "delete")
-	if err != nil {
-		slog.Error("Deleting item", "id", id, "error", err)
-		return
-	}
-	slog.Debug("Deleting item", "id", id)
-
-	err = getStore().Delete(integrityToken, encryptionToken, key)
-	if err != nil {
-		slog.Error("Deleting item", "id", id, "error", err)
-		return
-	}
-}
-
-func updateCommandFunc(cmd *cobra.Command, args []string) {
-	if len(args) < 2 {
-		slog.Error("Insufficient arguments for update command.")
-		cmd.Help()
-		return
-	}
-
-	id := args[0]
-	value := args[1]
-
-	slog.Debug("Updating item", "id", id, "value", value)
-	ts := time.Now().UTC()
-	key, err := validateFlags(id, "update")
-	if err != nil {
-		slog.Error("Updating item", "id", id, "error", err)
-		return
-	}
-	signature, payload, err := getStore().Insert(integrityToken, encryptionToken, ts, key, value)
-	if err != nil {
-		slog.Error("Updating item", "id", id, "error", err)
-		return
-	}
-	fmt.Printf("%s%s%s%s%s%s%s\n", signature, store.SPERATE, ts.Format(store.RFC3339Nano), store.SPERATE, id, store.SPERATE, payload)
-}
-
-func mergeCommandFunc(cmd *cobra.Command, args []string) {
-
-	input := strings.Join(args[0:], " ")
-	slog.Debug("Merging item", "value", input)
-
-	recs, err := store.Deserialize(integrityToken, input)
-	if err != nil {
-		slog.Error("Merging item", "error", err)
-		return
-	}
-	if len(recs) != 1 {
-		err := fmt.Errorf("expected one element")
-		slog.Error("Merging item", "error", err)
-		return
-	}
-	rec := recs[0]
-	_, err = validateFlags(fmt.Sprintf("%v", rec.Key.Identifier), "merge")
-	if err != nil {
-		slog.Error("Merging item", "id", rec.Key.Identifier, "error", err)
-		return
-	}
-	errs := getStore().Import(integrityToken, encryptionToken, rec)
-	for _, err2 := range errs {
-		if err2 != nil {
-			slog.Error("Merging item", "error", err2)
-			return
+	if value != "" {
+		if err := store.AppendTo(id, []byte(value)); err != nil {
+			slog.Error("Failed to append value", "id", id, "value", value, "error", err)
 		}
 	}
 }
 
-func getCommandFunc(cmd *cobra.Command, args []string) {
+// Delete command function
+func deleteCommandFunc(cmd *cobra.Command, args []string) {
 	if len(args) < 1 {
-		slog.Error("Insufficient arguments for get command.")
-		cmd.Help()
+		slog.Error("Insufficient arguments for delete command.")
+		err := cmd.Help()
+		if err != nil {
+			log.Fatalf(err.Error())
+		}
 		return
 	}
 
 	id := args[0]
+	slog.Debug("Deleting item", "id", id)
 
-	key, err := validateFlags(id, "get")
-	if err != nil {
-		slog.Error("Getting item", "id", id, "error", err)
-		return
+	if err := getStore().Delete(id); err != nil {
+		slog.Error("Failed to delete item", "id", id, "error", err)
 	}
-	slog.Debug("Getting item", "id", id)
-	rec, err := getStore().Get(integrityToken, encryptionToken, key)
-	if err != nil {
-		slog.Error("Getting value", "id", id, "error", err)
-		return
-	}
-	fmt.Printf("%s%s%s%s%s%s%s\n", rec.Signature, store.SPERATE, rec.TS, store.SPERATE, id, store.SPERATE, rec.Payload)
 }
 
+// Update command function
+func updateCommandFunc(cmd *cobra.Command, args []string) {
+	if len(args) < 2 {
+		slog.Error("Insufficient arguments for update command.")
+		err := cmd.Help()
+		if err != nil {
+			log.Fatalf(err.Error())
+		}
+		return
+	}
+
+	id, value := args[0], args[1]
+	slog.Debug("Updating item", "id", id, "value", value)
+
+	if err := getStore().AppendTo(id, []byte(value)); err != nil {
+		slog.Error("Failed to update item", "id", id, "error", err)
+	}
+}
+
+// Get command function
+func getCommandFunc(cmd *cobra.Command, args []string) {
+	if len(args) < 1 {
+		slog.Error("Insufficient arguments for get command.")
+		err := cmd.Help()
+		if err != nil {
+			log.Fatalf(err.Error())
+		}
+		return
+	}
+
+	id := args[0]
+	slog.Debug("Getting item", "id", id)
+
+	rec, err := getStore().ReadLast(id)
+	if err != nil {
+		slog.Error("Failed to get item", "id", id, "error", err)
+		return
+	}
+	fmt.Printf("%s\n", rec)
+}
+
+// List command function
 func listCommandFunc(cmd *cobra.Command, args []string) {
 	slog.Debug("Listing keys")
 
-	keys, err := getStore().Keys(namespace, sortKeys, pageSize, page)
+	keys, err := getStore().List()
 	if err != nil {
-		slog.Error("Listing keys", "error", err)
+		slog.Error("Failed to list keys", "error", err)
 		return
 	}
-	fmt.Printf("%v\n", keys)
-}
 
-func validateFlags(id, mode string) (store.Key, error) {
-	if integrityToken == "" {
-		return store.Key{}, fmt.Errorf("integrityToken is required")
+	if sortKeys {
+		sort.Strings(keys)
 	}
-	k, err := store.NewKey(namespace, id)
-	if err != nil {
-		slog.Error("key or namespace is not valid.", "error", err)
-		return store.Key{}, err
+
+	start := (page - 1) * pageSize
+	end := start + pageSize
+	if start > len(keys) {
+		start, end = 0, 0
+	} else if end > len(keys) {
+		end = len(keys)
 	}
-	slog.Debug("executing command", "id", id, "namespace", namespace, "command", mode)
-	return k, nil
+
+	fmt.Printf("%v\n", keys[start:end])
 }
 
 func init() {
 	rootCmd.PersistentFlags().StringVarP(
-		(*string)(&encryptionToken),
+		&encryptionToken,
 		"encryptionToken", "k", "",
-		"encryptionToken is used for encrypting and decrypting data. Use this option when you need to protect sensitive information by storing it securely.",
-	)
-	rootCmd.PersistentFlags().StringVarP(
-		(&namespace),
-		"namespace", "n", "default",
-		"namespace is used to 'group' together key's, a key then cannot be directly accessed without providing the namespace. It omited namespace will be set to default",
+		"Encryption token used for encrypting and decrypting data.",
 	)
 
 	rootCmd.PersistentFlags().StringVarP(
-		(*string)(&integrityToken),
-		"integrityToken", "s", "",
-		"Integrity token used for signing and verifying data integrity. Setting this is required to ensure data consistency, validate the integrity, and verify the authenticity of the data.",
+		&namespace,
+		"namespace", "n", "default",
+		"Namespace used to group keys. If omitted, namespace will be set to default.",
 	)
-	rootCmd.AddCommand(createCmd)
-	rootCmd.AddCommand(deleteCmd)
-	rootCmd.AddCommand(updateCmd)
-	rootCmd.AddCommand(getCmd)
-	rootCmd.AddCommand(mergeCmd)
-	rootCmd.AddCommand(listCmd)
+
+	rootCmd.PersistentFlags().StringVarP(
+		&integrityToken,
+		"integrityToken", "s", "",
+		"Integrity token used for signing and verifying data integrity.",
+	)
+
+	rootCmd.AddCommand(createCmd, deleteCmd, updateCmd, getCmd, listCmd)
+
 	listCmd.PersistentFlags().BoolVarP(
 		&sortKeys,
 		"sort", "r", false,
-		"Sort keys based on the specified criteria. Supported values: 'id', 'timestamp', 'value', etc.",
+		"Sort keys alphabetically.",
 	)
 
 	listCmd.PersistentFlags().IntVarP(
@@ -271,30 +225,10 @@ func init() {
 		"pagesize", "s", 10,
 		"Number of keys to display per page.",
 	)
-
-}
-
-// TODO rewritte this to be able to parse logs
-// TODO add subcommand to get a file via stdin
-func ReadLinesFromReader(reader io.Reader) ([]string, error) {
-	scanner := bufio.NewScanner(reader)
-	lines := make([]string, 0)
-
-	for scanner.Scan() {
-		line := scanner.Text()
-		lines = append(lines, line)
-	}
-
-	if err := scanner.Err(); err != nil {
-		return nil, err
-	}
-
-	return lines, nil
 }
 
 func main() {
 	if err := rootCmd.Execute(); err != nil {
-		slog.Error("Could not start main", "error", err)
-		return
+		log.Fatalf("Failed to execute command: %v", err)
 	}
 }

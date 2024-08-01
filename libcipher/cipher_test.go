@@ -1,4 +1,4 @@
-package cipherlib_test
+package libcipher_test
 
 import (
 	"bytes"
@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/u8717/crypt/cipherlib"
+	"github.com/u8717/crypt/libcipher"
 )
 
 func TestAESCBCHMAC_EncryptDecrypt(t *testing.T) {
@@ -243,7 +243,7 @@ func TestAESCBCHMAC_CyphertextIsRandomized(t *testing.T) {
 
 func testEncryptCBC(t *testing.T, encryptionKey []byte, integrityKey []byte, plaintext []byte) ([]byte, error) {
 	t.Helper()
-	encrypter, err := cipherlib.NewCBCHMACEncryptor(encryptionKey, integrityKey, sha256.New)
+	encrypter, err := libcipher.NewCBCHMACEncryptor(encryptionKey, integrityKey, sha256.New)
 	if err != nil {
 		return nil, err
 	}
@@ -261,7 +261,7 @@ func testEncryptCBC(t *testing.T, encryptionKey []byte, integrityKey []byte, pla
 
 func testDecryptCBC(t *testing.T, encryptionKey []byte, integrityKey []byte, ciphertext []byte) ([]byte, error) {
 	t.Helper()
-	decrypter, err := cipherlib.NewCBCHMACDecryptor(encryptionKey, integrityKey, sha256.New)
+	decrypter, err := libcipher.NewCBCHMACDecryptor(encryptionKey, integrityKey, sha256.New)
 	if err != nil {
 		return nil, err
 	}
@@ -275,7 +275,7 @@ func testDecryptCBC(t *testing.T, encryptionKey []byte, integrityKey []byte, cip
 
 func testEncryptGCM(t *testing.T, encryptionKey []byte, _ []byte, plaintext []byte) ([]byte, error) {
 	t.Helper()
-	encrypter, err := cipherlib.NewGCMEncryptor(encryptionKey, rand.Reader)
+	encrypter, err := libcipher.NewGCMEncryptor(encryptionKey, rand.Reader)
 	if err != nil {
 		return nil, err
 	}
@@ -290,7 +290,7 @@ func testEncryptGCM(t *testing.T, encryptionKey []byte, _ []byte, plaintext []by
 
 func testDecryptGCM(t *testing.T, encryptionKey []byte, _ []byte, ciphertext []byte) ([]byte, error) {
 	t.Helper()
-	decrypter, err := cipherlib.NewGCMDecryptor(encryptionKey)
+	decrypter, err := libcipher.NewGCMDecryptor(encryptionKey)
 	if err != nil {
 		return nil, err
 	}

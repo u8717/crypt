@@ -1,4 +1,4 @@
-package cipherlib
+package libcipher
 
 // provides a method to crypt a message with additional data.
 // Misuse of this method may lead to a panic.
@@ -23,17 +23,17 @@ type (
 )
 
 func (e MessageError) Error() string {
-	return "cipherlib/cipher: " + (string)(e)
+	return "libcipher/cipher: " + (string)(e)
 }
 func (e CipherTextError) Error() string {
-	return "cipherlib/cipher: " + (string)(e)
+	return "libcipher/cipher: " + (string)(e)
 }
 func (e EncryptionKeyError) Error() string {
-	return "cipherlib/cipher: " + (string)(e)
+	return "libcipher/cipher: " + (string)(e)
 }
 func (e IntegrityKeyError) Error() string {
-	return "cipherlib/cipher: " + (string)(e)
+	return "libcipher/cipher: " + (string)(e)
 }
 func (e InvalidUsageError) Error() string {
-	return "cipherlib/cipher: " + (string)(e)
+	return "libcipher/cipher: " + (string)(e)
 }

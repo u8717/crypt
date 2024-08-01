@@ -1,4 +1,4 @@
-package persist
+package libstore
 
 // Ops defines the interface for file operations.
 type Ops interface {
@@ -7,7 +7,7 @@ type Ops interface {
 	Create(key string) error
 	// ReadWhole reads the entire content of the given key.
 	// It returns the content as a byte slice or an error if the content cannot be read.
-	ReadWhole(key string) ([]byte, error)
+	ReadWhole(key string) ([][]byte, error)
 	// ReadLast reads the last entry of the given key.
 	// It returns the last entry or an error if the file cannot be read.
 	ReadLast(key string) ([]byte, error)

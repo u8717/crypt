@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/u8717/crypt/cipherlib"
+	"github.com/u8717/crypt/libcipher"
 )
 
 func main() {
@@ -61,7 +61,7 @@ func loadBasicKey(keyFile *string) ([]byte, []byte) {
 }
 
 func decrypt(encryptionKey []byte, integrityKey []byte, input []byte) string {
-	decryptor, err := cipherlib.NewCBCHMACDecryptor(encryptionKey, integrityKey, sha256.New)
+	decryptor, err := libcipher.NewCBCHMACDecryptor(encryptionKey, integrityKey, sha256.New)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Error initializing decryptor:", err)
 		os.Exit(1)
@@ -82,7 +82,7 @@ func decrypt(encryptionKey []byte, integrityKey []byte, input []byte) string {
 }
 
 func encrypt(encryptionKey []byte, integrityKey []byte, input []byte) string {
-	encryptor, err := cipherlib.NewCBCHMACEncryptor(encryptionKey, integrityKey, sha256.New)
+	encryptor, err := libcipher.NewCBCHMACEncryptor(encryptionKey, integrityKey, sha256.New)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Error initializing encryptor:", err)
 		os.Exit(1)

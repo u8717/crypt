@@ -1,4 +1,4 @@
-package cipherlib
+package libcipher
 
 import (
 	"crypto/aes"

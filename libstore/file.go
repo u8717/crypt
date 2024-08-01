@@ -1,8 +1,9 @@
-package persist
+package libstore
 
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"io/fs"
 	"log/slog"
 	"os"
@@ -57,13 +58,24 @@ func (fops fileOps) Create(key string) error {
 
 // ReadWhole reads the entire content of the file with the given key.
 // It returns the content as a byte slice or an error if the file cannot be read.
-func (fops fileOps) ReadWhole(key string) ([]byte, error) {
+func (fops fileOps) ReadWhole(key string) ([][]byte, error) {
 	path := filepath.Join(fops.location, key)
-	content, err := os.ReadFile(path)
+	file, err := os.Open(path)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", KeyError(fmt.Sprintf("reading file %s", key)), err)
 	}
-	return content, nil
+	defer file.Close()
+
+	var lines [][]byte
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		lines = append(lines, scanner.Bytes())
+	}
+	if err := scanner.Err(); err != nil && err != io.EOF {
+		return nil, fmt.Errorf("%w: %w", KeyError(fmt.Sprintf("reading file %s lines", key)), err)
+	}
+
+	return lines, nil
 }
 
 // ReadLast reads the last line of the file with the given key.

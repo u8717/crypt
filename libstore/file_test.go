@@ -1,16 +1,16 @@
-package persist_test
+package libstore_test
 
 import (
 	"os"
 	"reflect"
 	"testing"
 
-	"github.com/u8717/crypt/internal/persist"
+	"github.com/u8717/crypt/libstore"
 )
 
 func TestDefaultFileOps(t *testing.T) {
-	var fileOps persist.Ops
-	fileOps, err := persist.NewFileOps(".")
+	var fileOps libstore.Ops
+	fileOps, err := libstore.NewFileOps(".")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -34,18 +34,25 @@ func TestDefaultFileOps(t *testing.T) {
 	line1 := "Line 1"
 	line2 := "Line 2"
 	line3 := "Line 3"
-	content := []byte(line1 + "\n" + line2 + "\n" + line3)
-	err = fileOps.AppendTo(fileName, content)
-	if err != nil {
-		t.Errorf("Error appending to file: %v", err)
+	multipleEntries := []string{line1, line2, line3}
+	for _, c := range multipleEntries {
+		err = fileOps.AppendTo(fileName, []byte(c))
+		if err != nil {
+			t.Errorf("Error appending to file: %v", err)
+		}
 	}
 
 	readContent, err := fileOps.ReadWhole(fileName)
 	if err != nil {
 		t.Errorf("Error reading file: %v", err)
 	}
-	if string(readContent) != string(content) {
-		t.Error("Content mismatch. Expected:", content, "Got:", string(readContent))
+	if len(readContent) != len(multipleEntries) {
+		t.Error("Content len mismatch. Expected:", len(multipleEntries), "Got", len(readContent))
+	}
+	for i, c := range readContent {
+		if string(c) != string(multipleEntries[i]) {
+			t.Error("Content mismatch. Expected:", multipleEntries, "Got:", string(c))
+		}
 	}
 
 	readLineContent, err := fileOps.ReadLast(fileName)
@@ -63,9 +70,9 @@ func TestDefaultFileOps(t *testing.T) {
 }
 
 func TestWalkDir(t *testing.T) {
-	var fileOps persist.Ops
+	var fileOps libstore.Ops
 	testDir := "testdir"
-	fileOps, err := persist.NewFileOps(testDir)
+	fileOps, err := libstore.NewFileOps(testDir)
 	if err != nil {
 		t.Fatal(err)
 	}
