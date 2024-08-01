@@ -50,6 +50,22 @@ Located in `libcipher`, AES-GCM implements encryption, integrity, and authentici
 - **Key Management:** Ensure secure key generation, storage, and rotation practices. Separate encryption and integrity keys are not needed.
 - **Nonce/IV Generation:** This implementation recommends using `rand.Reader`.
 
+### keygen
+
+keygen located in `libcipher` is a function to generate cryptographically secure random keys suitable for various cryptographic operations.
+The minimum recommended key length is 32 bytes (256 bits) as for 2024
+
+#### usage example for keygen
+
+```go
+key, err := libcipher.GenerateKey(64)
+if err != nil {
+    t.Fatalf(err.Error())
+}
+integrityKey := []byte(key[32:])
+encryptionKey := []byte(key[:32])
+```
+
 ## libstore
 
 The `libstore` package provides a simple and secure key-value store with encryption and integrity features.
