@@ -3,7 +3,6 @@ package store_test
 import (
 	"fmt"
 	"log/slog"
-	"os"
 	"testing"
 	"time"
 
@@ -19,7 +18,8 @@ func TestRecordsStore(t *testing.T) {
 	}
 	var encryption store.Secret = "0123456789123456"
 	var integrityToken store.Secret = "my        secret"
-	var fileStore store.Records = store.NewManger()
+	location := "/tmp/" + uuid.New().String()
+	var fileStore store.Records = store.NewManger(location)
 
 	err = fileStore.Register(integrityToken, encryption, key)
 	if err != nil {
@@ -62,8 +62,9 @@ func TestRecordsStore(t *testing.T) {
 
 func TestKeys(t *testing.T) {
 	t.Run("EmptyDirectory", func(t *testing.T) {
-		f := store.NewManger()
-		result, err := f.Keys("namespace1", "a", true, 10, 1)
+		location := "/tmp/" + uuid.New().String()
+		f := store.NewManger(location)
+		result, err := f.Keys("namespace1", true, 10, 1)
 
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
@@ -76,7 +77,8 @@ func TestKeys(t *testing.T) {
 	})
 
 	t.Run("NonEmptyDirectory", func(t *testing.T) {
-		f := store.NewManger()
+		location := "/tmp/" + uuid.New().String()
+		f := store.NewManger(location)
 
 		var encryption store.Secret = "0123456789123456"
 		var integrityToken store.Secret = "my        secret"
@@ -93,12 +95,7 @@ func TestKeys(t *testing.T) {
 		}
 		defer f.Delete(integrityToken, encryption, id2)
 
-		dir, err := os.Getwd()
-		if err != nil {
-			slog.Error("Listing keys", "error", err)
-			return
-		}
-		result, err := f.Keys("test", dir, true, 10, 1)
+		result, err := f.Keys("test", true, 10, 1)
 
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
@@ -106,13 +103,14 @@ func TestKeys(t *testing.T) {
 
 		expectedCount := 2
 		if len(result) != expectedCount {
-			t.Errorf("Unexpected result count. Expected %d, got %d", expectedCount, len(result))
+			t.Errorf("Unexpected result count. Expected %d, got %d, list: %v", expectedCount, len(result), result)
 		}
 	})
 }
 
 func TestMerge(t *testing.T) {
-	f := store.NewManger()
+	location := "/tmp/" + uuid.New().String()
+	f := store.NewManger(location)
 
 	namespace := "namespace1"
 	key := store.Key{Namespace: namespace, Kind: store.String, Identifier: "test_key"}

@@ -18,8 +18,8 @@ type Secret string
 
 // TODO Replace with cipherlib
 type Crypt interface {
-	Encrypt(plaintext string, token Secret) (string, error)
-	Decrypt(ciphertext string, token Secret) (string, error)
+	Encrypt(plaintext []byte, token Secret) ([]byte, error)
+	Decrypt(ciphertext []byte, token Secret) ([]byte, error)
 }
 
 type AESCrypt struct{}
@@ -32,16 +32,16 @@ func VerifySignature(should, is string) error {
 	return nil
 }
 
-func GenerateHMAC(message string, token []byte, g func() hash.Hash) string {
+func GenerateHMAC(message []byte, token []byte, g func() hash.Hash) []byte {
 	h := hmac.New(g, token)
-	h.Write([]byte(message))
-	return base64.StdEncoding.EncodeToString(h.Sum(nil))
+	h.Write(message)
+	return []byte(base64.StdEncoding.EncodeToString(h.Sum(nil)))
 }
 
-func (AESCrypt) Encrypt(plaintext string, key Secret) (string, error) {
+func (AESCrypt) Encrypt(plaintext []byte, key Secret) ([]byte, error) {
 	block, err := aes.NewCipher([]byte(key))
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	// Pad the plaintext to a multiple of the block size
@@ -51,13 +51,13 @@ func (AESCrypt) Encrypt(plaintext string, key Secret) (string, error) {
 	iv := ciphertext[:aes.BlockSize]
 
 	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
-		return "", err
+		return nil, err
 	}
 
 	mode := cipher.NewCBCEncrypter(block, iv)
 	mode.CryptBlocks(ciphertext[aes.BlockSize:], paddedText)
 
-	return base64.StdEncoding.EncodeToString(ciphertext), nil
+	return []byte(base64.StdEncoding.EncodeToString(ciphertext)), nil
 }
 
 // PKCS7 padding implementation
@@ -67,15 +67,15 @@ func padPKCS7(data []byte, blockSize int) []byte {
 	return append(data, padText...)
 }
 
-func (AESCrypt) Decrypt(ciphertext string, token Secret) (string, error) {
+func (AESCrypt) Decrypt(ciphertext []byte, token Secret) ([]byte, error) {
 	block, err := aes.NewCipher([]byte(token))
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	decodedCiphertext, err := base64.StdEncoding.DecodeString(ciphertext)
+	decodedCiphertext, err := base64.StdEncoding.DecodeString(string(ciphertext))
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	iv := decodedCiphertext[:aes.BlockSize]
@@ -87,10 +87,10 @@ func (AESCrypt) Decrypt(ciphertext string, token Secret) (string, error) {
 	// Unpad the decrypted data
 	plaintext, err := unpadPKCS7(decodedCiphertext)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return string(plaintext), nil
+	return plaintext, nil
 }
 
 // unpadPKCS7 removes PKCS7 padding

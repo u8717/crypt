@@ -2,7 +2,6 @@ package persist_test
 
 import (
 	"os"
-	"path/filepath"
 	"reflect"
 	"testing"
 
@@ -10,15 +9,18 @@ import (
 )
 
 func TestDefaultFileOps(t *testing.T) {
-	var fileOps persist.Ops = persist.File{}
+	var fileOps persist.Ops
+	fileOps, err := persist.NewFileOps(".")
+	if err != nil {
+		t.Fatal(err)
+	}
 	fileName := "testfile.txt"
-
-	err := fileOps.Create(fileName)
+	err = fileOps.Create(fileName)
 	if err != nil {
 		t.Errorf("Error creating file: %v", err)
 	}
 	defer func() {
-		err := fileOps.DeleteFile(fileName)
+		err := fileOps.Delete(fileName)
 		if err == nil {
 			t.Errorf("Error deleting file: %v", err)
 		}
@@ -32,8 +34,8 @@ func TestDefaultFileOps(t *testing.T) {
 	line1 := "Line 1"
 	line2 := "Line 2"
 	line3 := "Line 3"
-	content := line1 + "\n" + line2 + "\n" + line3
-	err = fileOps.AppendToFile(fileName, content)
+	content := []byte(line1 + "\n" + line2 + "\n" + line3)
+	err = fileOps.AppendTo(fileName, content)
 	if err != nil {
 		t.Errorf("Error appending to file: %v", err)
 	}
@@ -42,7 +44,7 @@ func TestDefaultFileOps(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error reading file: %v", err)
 	}
-	if string(readContent) != content {
+	if string(readContent) != string(content) {
 		t.Error("Content mismatch. Expected:", content, "Got:", string(readContent))
 	}
 
@@ -50,27 +52,26 @@ func TestDefaultFileOps(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error reading last line: %v", err)
 	}
-	if readLineContent != line3 {
+	if string(readLineContent) != line3 {
 		t.Error("Last line content mismatch. Expected:", line3, "Got:", readLineContent)
 	}
 
-	err = fileOps.DeleteFile(fileName)
+	err = fileOps.Delete(fileName)
 	if err != nil {
 		t.Errorf("Error deleting file: %v", err)
 	}
 }
 
 func TestWalkDir(t *testing.T) {
-	var fileOps persist.Ops = persist.File{}
+	var fileOps persist.Ops
 	testDir := "testdir"
-	fileName1 := filepath.Join(testDir, "file1.txt")
-	fileName2 := filepath.Join(testDir, "file2.txt")
-
-	// Create test directory and files
-	err := os.Mkdir(testDir, os.ModePerm)
+	fileOps, err := persist.NewFileOps(testDir)
 	if err != nil {
-		t.Fatalf("Error creating test directory: %v", err)
+		t.Fatal(err)
 	}
+	fileName1 := "file1.txt"
+	fileName2 := "file2.txt"
+
 	defer func() {
 		err := os.RemoveAll(testDir)
 		if err != nil {
@@ -83,7 +84,7 @@ func TestWalkDir(t *testing.T) {
 		t.Fatalf("Error creating file1: %v", err)
 	}
 	defer func() {
-		err := fileOps.DeleteFile(fileName1)
+		err := fileOps.Delete(fileName1)
 		if err != nil {
 			t.Fatalf("Error deleting file1: %v", err)
 		}
@@ -94,7 +95,7 @@ func TestWalkDir(t *testing.T) {
 		t.Fatalf("Error creating file2: %v", err)
 	}
 	defer func() {
-		err := fileOps.DeleteFile(fileName2)
+		err := fileOps.Delete(fileName2)
 		if err != nil {
 			t.Fatalf("Error deleting file2: %v", err)
 		}
@@ -105,15 +106,7 @@ func TestWalkDir(t *testing.T) {
 	}
 	// Test WalkDir
 	var foundFiles []string
-	err = fileOps.WalkDir(testDir, func(path string, info os.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if !info.IsDir() {
-			foundFiles = append(foundFiles, path)
-		}
-		return nil
-	})
+	foundFiles, err = fileOps.List()
 	if err != nil {
 		t.Fatalf("Error walking directory: %v", err)
 	}

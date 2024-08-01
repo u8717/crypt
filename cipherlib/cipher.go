@@ -23,17 +23,17 @@ type (
 )
 
 func (e MessageError) Error() string {
-	return (string)(e)
+	return "cipherlib/cipher: " + (string)(e)
 }
 func (e CipherTextError) Error() string {
-	return (string)(e)
+	return "cipherlib/cipher: " + (string)(e)
 }
 func (e EncryptionKeyError) Error() string {
-	return (string)(e)
+	return "cipherlib/cipher: " + (string)(e)
 }
 func (e IntegrityKeyError) Error() string {
-	return (string)(e)
+	return "cipherlib/cipher: " + (string)(e)
 }
 func (e InvalidUsageError) Error() string {
-	return (string)(e)
+	return "cipherlib/cipher: " + (string)(e)
 }

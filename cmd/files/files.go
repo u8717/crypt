@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"os"
 	"strings"
 	"time"
 
@@ -60,7 +59,7 @@ var listCmd = &cobra.Command{
 }
 
 func getStore() store.Records {
-	return store.NewManger()
+	return store.NewManger(".")
 }
 
 var rootCmd = &cobra.Command{
@@ -209,14 +208,9 @@ func getCommandFunc(cmd *cobra.Command, args []string) {
 }
 
 func listCommandFunc(cmd *cobra.Command, args []string) {
-	dir, err := os.Getwd()
-	if err != nil {
-		slog.Error("Listing keys", "error", err)
-		return
-	}
 	slog.Debug("Listing keys")
 
-	keys, err := getStore().Keys(namespace, dir, sortKeys, pageSize, page)
+	keys, err := getStore().Keys(namespace, sortKeys, pageSize, page)
 	if err != nil {
 		slog.Error("Listing keys", "error", err)
 		return

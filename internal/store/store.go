@@ -22,7 +22,7 @@ type Records interface {
 	Insert(integrityToken, encryptionToken Secret, timestamp time.Time, key Key, payload string) (string, string, error)
 	Delete(integrityToken, encryptionToken Secret, key Key) error
 	Import(integrityToken, encryptionToken Secret, recs ...record) []error
-	Keys(namespace, pwd string, sort bool, pageSize, pageNumber int) (Keys, error)
+	Keys(namespace string, sort bool, pageSize, pageNumber int) (Keys, error)
 }
 
 func Serialize(rec record, signingToken Secret) (string, error) {
@@ -78,11 +78,11 @@ func Deserialize(integrityToken Secret, inputs ...string) ([]record, error) {
 
 func NewRecord(key Key, integrityToken Secret, timestamp time.Time, payload string) (record, error) {
 	toSign := fmt.Sprintf("%s, %s, %s, %s", key.Namespace, key.Identifier, timestamp.UTC().Format(RFC3339Nano), payload)
-	signature := GenerateHMAC(toSign, []byte(integrityToken), sha256.New)
+	signature := GenerateHMAC([]byte(toSign), []byte(integrityToken), sha256.New)
 	v := vault{
 		TS:        timestamp.UTC().Format(RFC3339Nano),
 		Payload:   payload,
-		Signature: signature,
+		Signature: string(signature),
 	}
 	return record{Key: key, Vault: v}, nil
 }
@@ -105,12 +105,12 @@ type record struct {
 
 func newVault(key Key, integrityToken Secret, timestamp time.Time, payload string) (vault, error) {
 	toSign := fmt.Sprintf("%s, %s, %s, %s", key.Namespace, key.Identifier, timestamp.UTC().Format(RFC3339Nano), payload)
-	signature := GenerateHMAC(toSign, []byte(integrityToken), sha256.New)
+	signature := GenerateHMAC([]byte(toSign), []byte(integrityToken), sha256.New)
 
 	return vault{
 		TS:        timestamp.UTC().Format(RFC3339Nano),
 		Payload:   payload,
-		Signature: signature,
+		Signature: string(signature),
 	}, nil
 }
 

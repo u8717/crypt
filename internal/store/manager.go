@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/fs"
-	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -19,8 +17,12 @@ type Manager struct {
 	crypt Crypt
 }
 
-func NewManger() Manager {
-	return Manager{files: persist.File{}, crypt: AESCrypt{}}
+func NewManger(location string) Manager {
+	files, err := persist.NewFileOps(location)
+	if err != nil {
+		panic(err.Error())
+	}
+	return Manager{files: files, crypt: AESCrypt{}}
 }
 
 func (f Manager) Register(integrityToken, encryptionToken Secret, key Key) error {
@@ -41,7 +43,7 @@ func (f Manager) Register(integrityToken, encryptionToken Secret, key Key) error
 		return err
 	}
 
-	metadata := string(jsonData)
+	metadata := jsonData
 	encrypted := encryptionToken != ""
 	if encrypted {
 		metadata, err = f.crypt.Encrypt(metadata, encryptionToken)
@@ -56,7 +58,7 @@ func (f Manager) Register(integrityToken, encryptionToken Secret, key Key) error
 	}
 
 	d := meta{
-		Payload:   metadata,
+		Payload:   string(metadata),
 		Encrypted: encrypted,
 	}
 	b, err := json.Marshal(d)
@@ -64,7 +66,7 @@ func (f Manager) Register(integrityToken, encryptionToken Secret, key Key) error
 		return err
 	}
 
-	err = f.files.AppendToFile(keyToMetaPath(key), string(b))
+	err = f.files.AppendTo(keyToMetaPath(key), b)
 	if err != nil {
 		return err
 	}
@@ -113,7 +115,7 @@ func (f Manager) Insert(integrityToken, encryptionToken Secret, timestamp time.T
 	if err != nil {
 		return "", "", err
 	}
-	metaRec := me.Payload
+	metaRec := []byte(me.Payload)
 	if me.Encrypted && encryptionToken == "" {
 		return "", "", fmt.Errorf("this key is not encrypted but was called without encrpytion key")
 	}
@@ -121,7 +123,7 @@ func (f Manager) Insert(integrityToken, encryptionToken Secret, timestamp time.T
 		return "", "", fmt.Errorf("this key is not encrypted but was called with encrpytion key")
 	}
 	if me.Encrypted {
-		metaRec, err = f.crypt.Decrypt(me.Payload, encryptionToken)
+		metaRec, err = f.crypt.Decrypt(metaRec, encryptionToken)
 		if err != nil {
 			return "", "", err
 		}
@@ -160,26 +162,26 @@ func (f Manager) Insert(integrityToken, encryptionToken Secret, timestamp time.T
 	if err != nil {
 		return "", "", err
 	}
-	entry := compacted.String()
+	entry := compacted.Bytes()
 	if me.Encrypted {
 		entry, err = f.crypt.Encrypt(entry, encryptionToken)
 		if err != nil {
 			return "", "", err
 		}
 	}
-	err = f.files.AppendToFile(keyToDataPath(key), entry)
+	err = f.files.AppendTo(keyToDataPath(key), []byte(entry))
 	if err != nil {
 		return "", "", err
 	}
-	return v.Signature, entry, nil
+	return v.Signature, string(entry), nil
 }
 
 func (f Manager) Delete(integrityToken, encryptionToken Secret, key Key) error {
-	err := f.files.DeleteFile(keyToDataPath(key))
+	err := f.files.Delete(keyToDataPath(key))
 	if err != nil {
 		return err
 	}
-	err = f.files.DeleteFile(keyToMetaPath(key))
+	err = f.files.Delete(keyToMetaPath(key))
 	if err != nil {
 		return err
 	}
@@ -235,26 +237,25 @@ func (f Manager) Import(integrityToken, encryptionToken Secret, recs ...record) 
 	return errs
 }
 
-func (f Manager) Keys(namespace, pwd string, sortedResult bool, pageSize, pageNumber int) (Keys, error) {
-	dir := pwd
+func (f Manager) Keys(namespace string, sortedResult bool, pageSize, pageNumber int) (Keys, error) {
 	var keys Keys
-	err := f.files.WalkDir(dir, func(path string, de fs.DirEntry, err error) error {
-		if de == nil {
-			return nil
-		}
-		if strings.HasPrefix(de.Name(), DATAPREFIX+SEPARATENAMESPACE+namespace) && strings.HasSuffix(de.Name(), DATASUFIX) {
-			s := filepath.Base(path)
-			s, ok := strings.CutSuffix(s, DATASUFIX)
+	res, err := f.files.List()
+	if err != nil {
+		return nil, err
+	}
+	for _, k := range res {
+		if strings.HasPrefix(k, DATAPREFIX+SEPARATENAMESPACE+namespace) && strings.HasSuffix(k, DATASUFIX) {
+			s, ok := strings.CutSuffix(k, DATASUFIX)
 			if !ok {
-				return fmt.Errorf("filepath structure is broken")
+				return nil, fmt.Errorf("filepath structure is broken")
 			}
 			s, ok = strings.CutPrefix(s, DATAPREFIX+SEPARATENAMESPACE+namespace)
 			if !ok {
-				return fmt.Errorf("filepath structure is broken")
+				return nil, fmt.Errorf("filepath structure is broken")
 			}
 			parts := strings.SplitAfterN(s, SEPARATETYPE, 2)
 			if len(parts) != 2 {
-				return fmt.Errorf("filepath structure is broken")
+				return nil, fmt.Errorf("filepath structure is broken")
 			}
 
 			keys = append(keys, Key{
@@ -263,10 +264,6 @@ func (f Manager) Keys(namespace, pwd string, sortedResult bool, pageSize, pageNu
 				Identifier: parts[1],
 			})
 		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
 	}
 
 	if sortedResult {
@@ -285,13 +282,4 @@ func (f Manager) Keys(namespace, pwd string, sortedResult bool, pageSize, pageNu
 	}
 
 	return keys[startIdx:endIdx], nil
-}
-
-func parseTime(ts string) (*time.Time, error) {
-	parsedTime, err := time.Parse(RFC3339Nano, ts)
-	if err != nil {
-		return nil, err
-	}
-
-	return &parsedTime, nil
 }

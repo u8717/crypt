@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// TODO remove namespace
+// // TODO remove namespace
 type Key struct {
 	Kind       kind
 	Namespace  string
@@ -130,4 +130,13 @@ func (s Keys) Less(i, j int) bool {
 
 func (s Keys) Swap(i, j int) {
 	s[i], s[j] = s[j], s[i]
+}
+
+func parseTime(ts string) (*time.Time, error) {
+	parsedTime, err := time.Parse(RFC3339Nano, ts)
+	if err != nil {
+		return nil, err
+	}
+
+	return &parsedTime, nil
 }
