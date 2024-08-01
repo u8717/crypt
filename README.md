@@ -50,6 +50,79 @@ AES-GCM implements encryption, integrity, and authenticity using AES-GCM mode vi
 - **Key Management:** Ensure secure key generation, storage, and rotation practices. Separate encryption and integrity keys are not needed.
 - **Nonce/IV Generation:** This implementation recommends using `rand.Reader`.
 
+## libstore
+
+The `libstore` package provides a simple and secure key-value store with encryption and integrity features.
+
+### Components
+
+- **file.go**: Implements file-based storage operations.
+- **file_test.go**: Contains tests for the file-based storage operations.
+- **ops.go**: Defines the operations for the key-value store.
+- **store_cryptor.go**: Integrates `libcipher` for encrypting and decrypting store operations.
+
+### Key Features
+
+- **File-Based Storage**: Stores key-value pairs in a file system.
+- **Encryption**: Uses `libcipher` for encrypting stored values.
+- **Data Integrity**: Ensures stored data has not been tampered with using HMAC.
+
+### Example Usage
+
+Here is a brief example of how to use the `libstore` package:
+
+```go
+package main
+
+import (
+	"crypto/sha256"
+	"fmt"
+	"log"
+
+	"github.com/u8717/crypt/libstore"
+)
+
+func main() {
+	ops, err := libstore.NewFileOps(".")
+	if err != nil {
+		log.Fatalf("Failed to initialize file operations: %v", err)
+	}
+	manager, err := libstore.NewManager(ops, []byte("encryptionKey"), []byte("integrityKey"), sha256.New)
+	if err != nil {
+		log.Fatalf("Failed to initialize cryptographic manager: %v", err)
+	}
+
+	// Create a new key
+	if err := manager.Create("exampleKey"); err != nil {
+		log.Fatalf("Failed to create key: %v", err)
+	}
+
+	// Append a value to the key
+	if err := manager.AppendTo("exampleKey", []byte("exampleValue")); err != nil {
+		log.Fatalf("Failed to append value: %v", err)
+	}
+
+	// Read the last value of the key
+	value, err := manager.ReadLast("exampleKey")
+	if err != nil {
+		log.Fatalf("Failed to read value: %v", err)
+	}
+	fmt.Printf("Read value: %s\n", value)
+
+	// List all keys
+	keys, err := manager.List()
+	if err != nil {
+		log.Fatalf("Failed to list keys: %v", err)
+	}
+	fmt.Printf("Keys: %v\n", keys)
+}
+```
+
+### Considerations
+
+- **Key Management**: Ensure secure key generation, storage, and rotation practices.
+- **Concurrency**: Be mindful of concurrent access to the file-based storage to avoid race conditions.
+
 ## Contributions
 
 Contributions are welcome! Feel free to open issues or submit pull requests.
