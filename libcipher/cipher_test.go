@@ -11,6 +11,12 @@ import (
 )
 
 func TestAESCBCHMAC_EncryptDecrypt(t *testing.T) {
+	key, err := libcipher.GenerateKey(64)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	integrityKey := key[32:]
+	encryptionKey := key[:32]
 	var testCases = []struct {
 		name          string
 		plaintext     []byte
@@ -21,64 +27,64 @@ func TestAESCBCHMAC_EncryptDecrypt(t *testing.T) {
 		{
 			name:          "SuccessfulEncryptionDecryption",
 			plaintext:     []byte("This is some super secret data to encrypt."),
-			integrityKey:  []byte("anothersecretintegritykey12345671234"),
-			encryptionKey: []byte("mysecretencryptionkey12345671234"),
+			integrityKey:  []byte(integrityKey),
+			encryptionKey: []byte(encryptionKey),
 		},
 		{
 			name:          "EmptyPlaintext",
 			plaintext:     []byte(""),
-			integrityKey:  []byte("anothersecretintegritykey12345671234"),
-			encryptionKey: []byte("mysecretencryptionkey12345671234"),
+			integrityKey:  []byte(integrityKey),
+			encryptionKey: []byte(encryptionKey),
 			expectedError: nil,
 		},
 		{
 			name:          "ShortEncryptionKey",
 			plaintext:     []byte("Some data"),
-			integrityKey:  []byte("anothersecretintegritykey12345671234"),
+			integrityKey:  []byte(integrityKey),
 			encryptionKey: []byte("too_short"),
-			expectedError: fmt.Errorf("encryption key too short"),
+			expectedError: fmt.Errorf("libcipher/cipher: encryption key too short"),
 		},
 		{
 			name:          "ShortIntegrityKey",
 			plaintext:     []byte("Some data"),
 			integrityKey:  []byte("too_short"),
-			encryptionKey: []byte("mysecretencryptionkey12345671234"),
-			expectedError: fmt.Errorf("integrity key too short"),
+			encryptionKey: []byte(encryptionKey),
+			expectedError: fmt.Errorf("libcipher/cipher: integrity key too short"),
 		},
 		{
 			name:          "SameKeys",
 			plaintext:     []byte("Some data"),
-			integrityKey:  []byte("mysecretencryptionkey12345671234"),
-			encryptionKey: []byte("mysecretencryptionkey12345671234"),
-			expectedError: fmt.Errorf("using same key for encryption and integrity is not allowed"),
+			integrityKey:  []byte(encryptionKey),
+			encryptionKey: []byte(encryptionKey),
+			expectedError: fmt.Errorf("libcipher/cipher: using same key for encryption and integrity is not allowed"),
 		},
 		{
 			name:          "SameKeys",
 			plaintext:     []byte("Some data"),
 			integrityKey:  nil,
-			encryptionKey: []byte("mysecretencryptionkey12345671234"),
-			expectedError: fmt.Errorf("integrity key too short"),
+			encryptionKey: []byte(encryptionKey),
+			expectedError: fmt.Errorf("libcipher/cipher: integrity key too short"),
 		},
 		{
 			name:          "SameKeys",
 			plaintext:     []byte("Some data"),
-			integrityKey:  []byte("mysecretencryptionkey12345671234"),
+			integrityKey:  []byte(integrityKey),
 			encryptionKey: nil,
-			expectedError: fmt.Errorf("encryption key too short"),
+			expectedError: fmt.Errorf("libcipher/cipher: encryption key too short"),
 		},
 		{
 			name:          "SameKeys",
 			plaintext:     nil,
-			integrityKey:  []byte("anothersecretintegritykey12345671234"),
-			encryptionKey: []byte("mysecretencryptionkey12345671234"),
-			expectedError: fmt.Errorf("message was nil"),
+			integrityKey:  []byte(integrityKey),
+			encryptionKey: []byte(encryptionKey),
+			expectedError: fmt.Errorf("libcipher/cipher: message was nil"),
 		},
 	}
 	for i, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			cypher, err := testEncryptCBC(t, tc.encryptionKey, tc.integrityKey, tc.plaintext)
 			if fmt.Sprint(err) != fmt.Sprint(tc.expectedError) {
-				t.Fatalf(err.Error())
+				t.Fatalf(fmt.Sprintf("expected %s %s %s", tc.expectedError, "got", err.Error()))
 			}
 			if tc.expectedError != nil {
 				return
@@ -123,21 +129,21 @@ func TestGCM_EncryptDecrypt(t *testing.T) {
 			plaintext:     []byte("Some data"),
 			integrityKey:  []byte("anothersecretintegritykey12345671234"),
 			encryptionKey: []byte("too_short"),
-			expectedError: fmt.Errorf("encryption key too short"),
+			expectedError: fmt.Errorf("libcipher/cipher: encryption key too short"),
 		},
 		{
 			name:          "SameKeys",
 			plaintext:     []byte("Some data"),
 			integrityKey:  []byte("mysecretencryptionkey12345671234"),
 			encryptionKey: nil,
-			expectedError: fmt.Errorf("encryption key too short"),
+			expectedError: fmt.Errorf("libcipher/cipher: encryption key too short"),
 		},
 		{
 			name:          "SameKeys",
 			plaintext:     nil,
 			integrityKey:  []byte("anothersecretintegritykey12345671234"),
 			encryptionKey: []byte("mysecretencryptionkey12345671234"),
-			expectedError: fmt.Errorf("message was nil"),
+			expectedError: fmt.Errorf("libcipher/cipher: message was nil"),
 		},
 	}
 	for i, tc := range testCases {
