@@ -12,12 +12,11 @@ import (
 )
 
 var (
-	location        string
-	integrityToken  string
-	encryptionToken string
-	page            int
-	pageSize        int
-	sortKeys        bool
+	location string
+	token    string
+	page     int
+	pageSize int
+	sortKeys bool
 )
 
 // Command definitions
@@ -63,6 +62,12 @@ var (
 
 // Initialize the store
 func getStore() libstore.Ops {
+	if len(token) < 64 {
+		log.Fatalf("Master token must be at least 64 bytes long.")
+	}
+	encryptionToken := token[:32]
+	integrityToken := token[32:]
+
 	ops, err := libstore.NewFileOps(".")
 	if err != nil {
 		log.Fatalf("Failed to initialize file operations: %v", err)
@@ -190,15 +195,9 @@ func listCommandFunc(cmd *cobra.Command, args []string) {
 
 func init() {
 	rootCmd.PersistentFlags().StringVarP(
-		&encryptionToken,
-		"encryptionToken", "e", "",
-		"Encryption token used for encrypting and decrypting data.",
-	)
-
-	rootCmd.PersistentFlags().StringVarP(
-		&integrityToken,
-		"integrityToken", "i", "",
-		"Integrity token used for signing and verifying data integrity.",
+		&token,
+		"key", "k", "",
+		"key used for both encrypting/decrypting and signing/verifying data.",
 	)
 
 	rootCmd.PersistentFlags().StringVarP(
