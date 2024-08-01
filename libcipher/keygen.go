@@ -20,7 +20,7 @@ func GenerateKey(keyLength int) (string, error) {
 		return "", KeyGenerationError("key length must be positive")
 	}
 
-	key := make([]byte, keyLength) // Convert key length from bits to bytes
+	key := make([]byte, keyLength)
 	if _, err := rand.Read(key); err != nil {
 		return "", fmt.Errorf("%w:%w", KeyGenerationError("error generating key"), err)
 	}
